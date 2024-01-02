@@ -26,7 +26,7 @@ $ docker-compose up
 - To run tests
 
 ```sh
-$ docker-compose run --rm sh -c "python manage.py test && flake8"
+$ docker-compose run --rm sh -c "pytest && flake8"
 ```
 
 - To add new migrations
