@@ -3,7 +3,7 @@ Tests for models.
 """
 import pytest
 from django.contrib.auth import get_user_model
-from user.tests.user_factory import UserFactory
+from user.user_factory import UserFactory
 
 
 @pytest.mark.django_db
