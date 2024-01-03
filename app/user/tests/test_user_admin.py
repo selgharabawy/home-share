@@ -33,6 +33,8 @@ def test_users_list(client, user):
 
     assert user.name in res.content.decode()
     assert user.email in res.content.decode()
+    assert user.gender in res.content.decode()
+    assert user.user_type in res.content.decode()
 
 
 def test_edit_user_page(client, user):
