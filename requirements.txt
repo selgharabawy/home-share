@@ -10,5 +10,3 @@ pytest>=7.4.4,<7.5
 pytest-django>=4.7.0,<4.8
 factory_boy>=3.3.0,<3.4
 Faker>=22.0.0,<22.1
-
-tox>=4.11.4,<4.12
