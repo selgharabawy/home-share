@@ -16,7 +16,7 @@ def admin_user(db):
 
 @pytest.fixture
 def user(db):
-    return UserFactory()
+    return UserFactory(user_type='home_seeker')
 
 
 @pytest.fixture
@@ -34,7 +34,13 @@ def test_users_list(client, user):
     assert user.name in res.content.decode()
     assert user.email in res.content.decode()
     assert user.gender in res.content.decode()
-    assert user.user_type in res.content.decode()
+    for choice in [
+        ('home_seeker', 'Home Seeker'),
+        ('property_owner', 'Property Owner'),
+        ('admin', 'Administrator'),
+    ]:
+        if user.user_type == choice[0]:
+            assert choice[1] in res.content.decode()
 
 
 def test_edit_user_page(client, user):
