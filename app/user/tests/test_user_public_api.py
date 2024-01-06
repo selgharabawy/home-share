@@ -15,7 +15,7 @@ CREATE_USER_URL = reverse('user:create')
 
 
 @pytest.fixture
-def client(admin_user):
+def client():
     client = APIClient()
     return client
 
@@ -23,9 +23,6 @@ def client(admin_user):
 @pytest.mark.django_db
 def test_create_user_success(client):
     """Test creating a user with an email is successful."""
-    user = UserFactory(user_type='home_seeker')
-    # home_seeker_user = UserFactory(user_type='home_seeker')
-
     payload = {
         'email': 'test@example.com',
         'password': 'testpass123',
