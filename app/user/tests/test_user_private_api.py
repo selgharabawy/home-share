@@ -19,14 +19,14 @@ ME_URL = reverse('user:me')
 
 
 @pytest.fixture
-def home_seeker(db):
-    return UserFactory(user_type='home_seeker')
+def admin(db):
+    return UserFactory(user_type='admin')
 
 
 @pytest.fixture
-def client(home_seeker):
+def client(admin):
     client = APIClient()
-    client.force_authenticate(home_seeker)
+    client.force_authenticate(admin)
     return client
 
 
@@ -56,16 +56,16 @@ def refresh_client(user_details_authenticated):
 
 
 @pytest.mark.django_db
-def test_retrieve_profile_success(client, home_seeker):
+def test_retrieve_profile_success(client, admin):
     """Test retrieving profile for logged in user."""
     res = client.get(ME_URL)
 
     assert res.status_code == status.HTTP_200_OK
     assert res.data == {
-        'name': home_seeker.name,
-        'email': home_seeker.email,
-        'gender': home_seeker.gender,
-        'user_type': home_seeker.user_type,
+        'name': admin.name,
+        'email': admin.email,
+        'gender': admin.gender,
+        'user_type': admin.user_type,
     }
 
 
@@ -78,7 +78,7 @@ def test_post_me_not_allowed(client):
 
 
 @pytest.mark.django_db
-def test_update_user_profile(client, home_seeker):
+def test_update_user_profile(client, admin):
     """Test updating the user profile for the authenticated user."""
     payload = {
         'name': "Updated name", 'password': 'newpassword123'
@@ -86,9 +86,9 @@ def test_update_user_profile(client, home_seeker):
 
     res = client.patch(ME_URL, payload)
 
-    home_seeker.refresh_from_db()
-    assert home_seeker.name == payload['name']
-    assert home_seeker.check_password(payload['password']) is True
+    admin.refresh_from_db()
+    assert admin.name == payload['name']
+    assert admin.check_password(payload['password']) is True
     assert res.status_code == status.HTTP_200_OK
 
 
