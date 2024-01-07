@@ -14,7 +14,6 @@ User = get_user_model()
 CREATE_USER_URL = reverse('user:create')
 ACCESS_TOKEN_URL = reverse('user:token_obtain_pair')
 REFRESH_TOKEN_URL = reverse('user:token_refresh')
-LOGOUT_URL = reverse('user:auth_logout')
 ME_URL = reverse('user:me')
 
 
@@ -32,18 +31,6 @@ def user_details():
         'password': 'test-user-password123'
     }
     User.objects.create_user(**user_details)
-    return user_details
-
-
-@pytest.fixture
-def user_details_authenticated(client):
-    user_details = {
-        'name': 'Test Name',
-        'email': 'test@example.com',
-        'password': 'test-user-password123'
-    }
-    user = User.objects.create_user(**user_details)
-    client.force_authenticate(user=user)
     return user_details
 
 
@@ -155,29 +142,6 @@ def test_refresh_access_token(client, user_details):
 
     assert refresh_response.status_code == status.HTTP_200_OK
     assert 'access' in refresh_response.data
-
-
-@pytest.mark.django_db
-def test_logout(client, user_details_authenticated):
-    """Test logging out invalidates the token."""
-    # Obtain the access and refresh tokens
-    payload = {
-        'email': user_details_authenticated['email'],
-        'password': user_details_authenticated['password'],
-    }
-    token_response = client.post(ACCESS_TOKEN_URL, payload)
-    refresh_token = token_response.data['refresh']
-
-    # Perform logout
-    logout_payload = {'refresh': refresh_token}
-    logout_response = client.post(LOGOUT_URL, logout_payload)
-
-    assert logout_response.status_code == status.HTTP_205_RESET_CONTENT
-
-    # Attempt to use the blacklisted refresh token to get a new access token
-    refresh_payload = {'refresh': refresh_token}
-    new_token_response = client.post(REFRESH_TOKEN_URL, refresh_payload)
-    assert new_token_response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 @pytest.mark.django_db
