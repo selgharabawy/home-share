@@ -1,7 +1,8 @@
 """
 Views for the API.
 """
-from rest_framework import generics, status, permissions, authentication
+from rest_framework import generics, status, permissions
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -11,6 +12,7 @@ from rest_framework_simplejwt.token_blacklist.models import (
 
 from user.serializers import (
     UserSerializer,
+    LogoutSerializer
 )
 
 
@@ -20,7 +22,9 @@ class CreateUserView(generics.CreateAPIView):
 
 
 class LogoutView(APIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [permissions.IsAuthenticated]
+    serializer_class = LogoutSerializer
 
     def post(self, request):
         try:
@@ -40,7 +44,7 @@ class LogoutView(APIView):
 class ManageUserView(generics.RetrieveUpdateAPIView):
     """Manage the authenticated user."""
     serializer_class = UserSerializer
-    authentication_classes = [authentication.TokenAuthentication]
+    authentication_classes = [JWTAuthentication]
     permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self):
