@@ -11,7 +11,7 @@ from rest_framework import status
 
 User = get_user_model()
 
-CREATE_USER_URL = reverse('user:create')
+CREATE_LIST_USERS_URL = reverse('user:user-list')
 ACCESS_TOKEN_URL = reverse('user:token_obtain_pair')
 REFRESH_TOKEN_URL = reverse('user:token_refresh')
 LOGOUT_URL = reverse('user:auth_logout')
@@ -90,6 +90,61 @@ def test_update_user_profile(client, admin):
     assert admin.name == payload['name']
     assert admin.check_password(payload['password']) is True
     assert res.status_code == status.HTTP_200_OK
+
+
+@pytest.mark.django_db
+def test_successful_list_users_successful_for_admin_users(client):
+    """Test list users for the authenticated admin user is successful."""
+    for i in range(0, 5):
+        UserFactory(user_type='home_seeker')
+        UserFactory(user_type='property_owner')
+    res = client.get(CREATE_LIST_USERS_URL)
+
+    assert res.status_code == status.HTTP_200_OK
+    assert len(res.data) == 10
+
+
+@pytest.mark.django_db
+def test_no_admin_users_returned_in_list_users(client):
+    """Test list users for the authenticated admin user is successful."""
+    for i in range(0, 5):
+        UserFactory(user_type='home_seeker')
+        UserFactory(user_type='property_owner')
+        UserFactory(user_type='admin')
+    res = client.get(CREATE_LIST_USERS_URL)
+
+    assert res.status_code == status.HTTP_200_OK
+    assert len(res.data) == 10
+
+
+@pytest.mark.django_db
+def test_home_seekers_cannot_list_users():
+    """Test authenticated home seekers are forbidden to list users."""
+    user = UserFactory(user_type='home_seeker')
+    client = APIClient()
+    client.force_authenticate(user=user)
+    for i in range(0, 5):
+        UserFactory(user_type='home_seeker')
+        UserFactory(user_type='property_owner')
+        UserFactory(user_type='admin')
+    res = client.get(CREATE_LIST_USERS_URL)
+
+    assert res.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_property_owners_cannot_list_users():
+    """Test authenticated property owners are forbidden to list users."""
+    user = UserFactory(user_type='property_owner')
+    client = APIClient()
+    client.force_authenticate(user=user)
+    for i in range(0, 5):
+        UserFactory(user_type='home_seeker')
+        UserFactory(user_type='property_owner')
+        UserFactory(user_type='admin')
+    res = client.get(CREATE_LIST_USERS_URL)
+
+    assert res.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.django_db
