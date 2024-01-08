@@ -32,6 +32,7 @@ class UserManager(BaseUserManager):
                 Home Seeker or Property Owner.'
             )
         user = self.model(email=self.normalize_email(email), **extra_fields)
+        user.is_staff = True if user_type == 'admin' else False
         user.set_password(password)
         user.gender = gender
         user.user_type = user_type
