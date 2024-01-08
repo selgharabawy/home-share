@@ -15,11 +15,12 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = get_user_model()
-        fields = ['email', 'password', 'name', 'gender', 'user_type']
+        fields = ['email', 'password', 'name',
+                  'gender', 'user_type', 'is_active']
         extra_kwargs = {
             'password': {'write_only': True, 'min_length': 5},
             'gender': {'required': True},
-            'user_type': {'required': True}
+            'user_type': {'required': True},
         }
 
     def create(self, validated_data):
@@ -36,6 +37,12 @@ class UserSerializer(serializers.ModelSerializer):
             user.save()
 
         return user
+
+
+class SuperUserSerializer(serializers.ModelSerializer):
+    """Serializer for the user objects to superuser auth."""
+    class Meta(UserSerializer.Meta):
+        fields = UserSerializer.Meta.fields + ['is_staff', 'is_superuser']
 
 
 class LogoutSerializer(serializers.Serializer):

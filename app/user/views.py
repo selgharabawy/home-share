@@ -9,10 +9,11 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.token_blacklist.models import (
     BlacklistedToken, OutstandingToken
 )
-from .permissions import IsAdminUser
+from .permissions import IsAdminUser, IsSuperUser
 
 from user.serializers import (
     UserSerializer,
+    SuperUserSerializer,
     LogoutSerializer
 )
 from django.contrib.auth import get_user_model
@@ -26,7 +27,6 @@ class UserView(
             viewsets.GenericViewSet
 ):
     """Create a new user in the system."""
-    serializer_class = UserSerializer
     authentication_classes = [JWTAuthentication]
 
     def get_permissions(self):
@@ -37,8 +37,42 @@ class UserView(
         return [permission() for permission in permission_classes]
 
     def get_queryset(self):
+        if self.request.user and self.request.user.is_authenticated:
+            if IsSuperUser().has_permission(self.request, self):
+                # If the user is a superuser, return all users
+                return User.objects.all()
         # Filter out admin users
         return User.objects.exclude(user_type='admin')
+
+    def get_serializer_class(self):
+        if (
+            self.action == 'list' and
+            self.request.user and
+            self.request.user.is_authenticated
+        ):
+            if IsSuperUser().has_permission(self.request, self):
+                # Use SuperUserSerializer for superusers
+                return SuperUserSerializer
+        # Use UserSerializer for other users
+        return UserSerializer
+
+    def create(self, request, *args, **kwargs):
+        user_type = request.data.get('user_type')
+        if (
+            user_type == 'admin' and
+            not IsSuperUser().has_permission(request, self)
+        ):
+            # Deny create an admin user for non-superuser
+            return Response(
+                {
+                    'detail':
+                    'Only superusers can create admin users.'
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Proceed with the standard creation process
+        return super().create(request, *args, **kwargs)
 
 
 class LogoutView(APIView):
