@@ -11,7 +11,7 @@ from rest_framework import status
 
 User = get_user_model()
 
-CREATE_USER_URL = reverse('user:create')
+CREATE_LIST_USERS_URL = reverse('user:user-list')
 ACCESS_TOKEN_URL = reverse('user:token_obtain_pair')
 REFRESH_TOKEN_URL = reverse('user:token_refresh')
 LOGOUT_URL = reverse('user:auth_logout')
@@ -19,14 +19,14 @@ ME_URL = reverse('user:me')
 
 
 @pytest.fixture
-def home_seeker(db):
-    return UserFactory(user_type='home_seeker')
+def admin(db):
+    return UserFactory(user_type='admin')
 
 
 @pytest.fixture
-def client(home_seeker):
+def client(admin):
     client = APIClient()
-    client.force_authenticate(home_seeker)
+    client.force_authenticate(admin)
     return client
 
 
@@ -56,16 +56,16 @@ def refresh_client(user_details_authenticated):
 
 
 @pytest.mark.django_db
-def test_retrieve_profile_success(client, home_seeker):
+def test_retrieve_profile_success(client, admin):
     """Test retrieving profile for logged in user."""
     res = client.get(ME_URL)
 
     assert res.status_code == status.HTTP_200_OK
     assert res.data == {
-        'name': home_seeker.name,
-        'email': home_seeker.email,
-        'gender': home_seeker.gender,
-        'user_type': home_seeker.user_type,
+        'name': admin.name,
+        'email': admin.email,
+        'gender': admin.gender,
+        'user_type': admin.user_type,
     }
 
 
@@ -78,7 +78,7 @@ def test_post_me_not_allowed(client):
 
 
 @pytest.mark.django_db
-def test_update_user_profile(client, home_seeker):
+def test_update_user_profile(client, admin):
     """Test updating the user profile for the authenticated user."""
     payload = {
         'name': "Updated name", 'password': 'newpassword123'
@@ -86,10 +86,65 @@ def test_update_user_profile(client, home_seeker):
 
     res = client.patch(ME_URL, payload)
 
-    home_seeker.refresh_from_db()
-    assert home_seeker.name == payload['name']
-    assert home_seeker.check_password(payload['password']) is True
+    admin.refresh_from_db()
+    assert admin.name == payload['name']
+    assert admin.check_password(payload['password']) is True
     assert res.status_code == status.HTTP_200_OK
+
+
+@pytest.mark.django_db
+def test_successful_list_users_successful_for_admin_users(client):
+    """Test list users for the authenticated admin user is successful."""
+    for i in range(0, 5):
+        UserFactory(user_type='home_seeker')
+        UserFactory(user_type='property_owner')
+    res = client.get(CREATE_LIST_USERS_URL)
+
+    assert res.status_code == status.HTTP_200_OK
+    assert len(res.data) == 10
+
+
+@pytest.mark.django_db
+def test_no_admin_users_returned_in_list_users(client):
+    """Test list users for the authenticated admin user is successful."""
+    for i in range(0, 5):
+        UserFactory(user_type='home_seeker')
+        UserFactory(user_type='property_owner')
+        UserFactory(user_type='admin')
+    res = client.get(CREATE_LIST_USERS_URL)
+
+    assert res.status_code == status.HTTP_200_OK
+    assert len(res.data) == 10
+
+
+@pytest.mark.django_db
+def test_home_seekers_cannot_list_users():
+    """Test authenticated home seekers are forbidden to list users."""
+    user = UserFactory(user_type='home_seeker')
+    client = APIClient()
+    client.force_authenticate(user=user)
+    for i in range(0, 5):
+        UserFactory(user_type='home_seeker')
+        UserFactory(user_type='property_owner')
+        UserFactory(user_type='admin')
+    res = client.get(CREATE_LIST_USERS_URL)
+
+    assert res.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_property_owners_cannot_list_users():
+    """Test authenticated property owners are forbidden to list users."""
+    user = UserFactory(user_type='property_owner')
+    client = APIClient()
+    client.force_authenticate(user=user)
+    for i in range(0, 5):
+        UserFactory(user_type='home_seeker')
+        UserFactory(user_type='property_owner')
+        UserFactory(user_type='admin')
+    res = client.get(CREATE_LIST_USERS_URL)
+
+    assert res.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.django_db

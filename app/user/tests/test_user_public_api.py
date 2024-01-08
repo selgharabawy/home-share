@@ -11,7 +11,7 @@ from rest_framework import status
 
 User = get_user_model()
 
-CREATE_USER_URL = reverse('user:create')
+CREATE_LIST_USERS_URL = reverse('user:user-list')
 ACCESS_TOKEN_URL = reverse('user:token_obtain_pair')
 REFRESH_TOKEN_URL = reverse('user:token_refresh')
 ME_URL = reverse('user:me')
@@ -44,7 +44,7 @@ def test_create_user_success(client):
         'user_type': 'home_seeker',
         'gender': 'M'
     }
-    res = client.post(CREATE_USER_URL, payload)
+    res = client.post(CREATE_LIST_USERS_URL, payload)
 
     assert res.status_code == status.HTTP_201_CREATED
     user = User.objects.get(email=payload['email'])
@@ -61,7 +61,7 @@ def test_user_with_email_exists_error(client):
         'name': 'Test Name',
     }
     UserFactory(**payload)
-    res = client.post(CREATE_USER_URL, payload)
+    res = client.post(CREATE_LIST_USERS_URL, payload)
 
     assert res.status_code == status.HTTP_400_BAD_REQUEST
 
@@ -74,7 +74,7 @@ def test_password_too_short_error(client):
         'password': 'test',
         'name': 'Test Name',
     }
-    res = client.post(CREATE_USER_URL, payload)
+    res = client.post(CREATE_LIST_USERS_URL, payload)
 
     assert res.status_code == status.HTTP_400_BAD_REQUEST
     user_exists = get_user_model().objects.filter(
@@ -148,5 +148,16 @@ def test_refresh_access_token(client, user_details):
 def test_retrieve_user_unauthorized(client):
     """Test authentication is required for users."""
     res = client.get(ME_URL)
+
+    assert res.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+@pytest.mark.django_db
+def test_unauthorized_list_users_when_no_authenticated(client):
+    """Test list users for the authenticated admin user is successful."""
+    for i in range(0, 5):
+        UserFactory(user_type='home_seeker')
+        UserFactory(user_type='property_owner')
+    res = client.get(CREATE_LIST_USERS_URL)
 
     assert res.status_code == status.HTTP_401_UNAUTHORIZED
