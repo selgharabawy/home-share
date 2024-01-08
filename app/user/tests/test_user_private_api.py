@@ -55,6 +55,42 @@ def refresh_client(user_details_authenticated):
     return refresh_client
 
 
+@pytest.fixture
+def superuser():
+    return User.objects.create_superuser(
+        email='superuser@example.com',
+        name='superuser',
+        is_active=True,
+        gender='M',
+        user_type='admin'
+    )
+
+
+@pytest.fixture
+def superuser_client(superuser):
+    client = APIClient()
+    client.force_authenticate(user=superuser)
+    return client
+
+
+@pytest.fixture
+def adminuser():
+    return User.objects.create_user(
+        email='admin@example.com',
+        name='admin',
+        is_active=True,
+        gender='M',
+        user_type='admin'
+    )
+
+
+@pytest.fixture
+def admin_client(adminuser):
+    client = APIClient()
+    client.force_authenticate(user=adminuser)
+    return client
+
+
 @pytest.mark.django_db
 def test_retrieve_profile_success(client, admin):
     """Test retrieving profile for logged in user."""
@@ -66,6 +102,7 @@ def test_retrieve_profile_success(client, admin):
         'email': admin.email,
         'gender': admin.gender,
         'user_type': admin.user_type,
+        'is_active': admin.is_active,
     }
 
 
@@ -115,6 +152,56 @@ def test_no_admin_users_returned_in_list_users(client):
 
     assert res.status_code == status.HTTP_200_OK
     assert len(res.data) == 10
+
+
+@pytest.mark.django_db
+def test_superusers_list_users_including_admins(superuser_client):
+    """Test list users for the superuser includes admin users is successful."""
+    for i in range(0, 5):
+        UserFactory(user_type='home_seeker')
+        UserFactory(user_type='property_owner')
+        UserFactory(user_type='admin')
+    res = superuser_client.get(CREATE_LIST_USERS_URL)
+
+    assert res.status_code == status.HTTP_200_OK
+    assert len(res.data) == 16
+
+
+@pytest.mark.django_db
+def test_superusers_can_create_admin_user(superuser_client):
+    """Test superuser can create admin users is successful."""
+    payload = {
+        "email": "admin_new@example.com",
+        "password": "admin_pass",
+        "name": "admin",
+        "gender": "M",
+        "user_type": "admin",
+        "is_active": True
+    }
+
+    res = superuser_client.post(CREATE_LIST_USERS_URL, payload)
+
+    assert res.status_code == status.HTTP_201_CREATED
+    user = User.objects.get(email=payload['email'])
+    assert user.check_password(payload['password']) is True
+
+
+@pytest.mark.django_db
+def test_admin_cannot_create_admin_user(admin_client):
+    """Test superuser can create admin users is successful."""
+    payload = {
+        "email": "admin_new@example.com",
+        "password": "admin_pass",
+        "name": "admin",
+        "gender": "M",
+        "user_type": "admin",
+        "is_active": True
+    }
+
+    res = admin_client.post(CREATE_LIST_USERS_URL, payload)
+
+    assert res.status_code == status.HTTP_403_FORBIDDEN
+    assert User.objects.filter(email=payload['email']).exists() is False
 
 
 @pytest.mark.django_db
