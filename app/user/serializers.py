@@ -15,8 +15,9 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = get_user_model()
-        fields = ['email', 'password', 'name',
-                  'gender', 'user_type', 'is_active']
+        fields = ['id', 'email', 'password', 'name',
+                  'gender', 'user_type', 'is_active', 'image']
+        read_only_fields = ['id', 'image']
         extra_kwargs = {
             'password': {'write_only': True, 'min_length': 5},
             'gender': {'required': True},
@@ -37,6 +38,16 @@ class UserSerializer(serializers.ModelSerializer):
             user.save()
 
         return user
+
+
+class UserImageSerializer(serializers.ModelSerializer):
+    """Serializer for uploading images to users."""
+
+    class Meta:
+        model = get_user_model()
+        fields = ['id', 'image']
+        read_only_fields = ['id']
+        extra_kwargs = {'image': {'required': 'True'}}
 
 
 class SuperUserSerializer(serializers.ModelSerializer):
