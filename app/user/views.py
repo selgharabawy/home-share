@@ -3,6 +3,8 @@ Views for the API.
 """
 from rest_framework import generics, mixins, viewsets, status, permissions
 from rest_framework_simplejwt.authentication import JWTAuthentication
+
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -14,6 +16,7 @@ from .permissions import IsAdminUser, IsSuperUser
 from user.serializers import (
     UserSerializer,
     SuperUserSerializer,
+    UserImageSerializer,
     LogoutSerializer
 )
 from django.contrib.auth import get_user_model
@@ -47,13 +50,11 @@ class UserView(
     def get_serializer_class(self):
         if (
             self.action == 'list' and
-            self.request.user and
-            self.request.user.is_authenticated
+            IsSuperUser().has_permission(self.request, self)
         ):
-            if IsSuperUser().has_permission(self.request, self):
-                # Use SuperUserSerializer for superusers
-                return SuperUserSerializer
-        # Use UserSerializer for other users
+            return SuperUserSerializer
+        elif self.action == 'upload_image':
+            return UserImageSerializer
         return UserSerializer
 
     def create(self, request, *args, **kwargs):
@@ -73,6 +74,23 @@ class UserView(
 
         # Proceed with the standard creation process
         return super().create(request, *args, **kwargs)
+
+    @action(
+        methods=['POST'],
+        detail=True,
+        url_path='upload-image',
+        url_name='upload-image'
+    )
+    def upload_image(self, request, pk=None):
+        """Upload an image to user."""
+        user = self.get_object()
+        serializer = self.get_serializer(user, data=request.data)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class LogoutView(APIView):
@@ -100,6 +118,18 @@ class ManageUserView(generics.RetrieveUpdateAPIView):
     serializer_class = UserSerializer
     authentication_classes = [JWTAuthentication]
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        """Retrieve and return the authenticatd user."""
+        return self.request.user
+
+
+class ManageUserImageView(generics.UpdateAPIView):
+    """Update Image the authenticated user."""
+    serializer_class = UserImageSerializer
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['patch']
 
     def get_object(self):
         """Retrieve and return the authenticatd user."""

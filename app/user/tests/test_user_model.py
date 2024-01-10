@@ -1,9 +1,11 @@
 """
 Tests for models.
 """
+from unittest.mock import patch
 import pytest
 from django.contrib.auth import get_user_model
 from user.user_factory import UserFactory
+from user.models import user_image_file_path
 
 User = get_user_model()
 
@@ -100,3 +102,14 @@ def test_create_superuser():
     )
     assert user.is_superuser is True
     assert user.is_staff is True
+
+
+@pytest.mark.django_db
+@patch('user.models.uuid.uuid4')
+def test_user_photo_file_name_uuid(mock_uuid):
+    """Test generating image path."""
+    uuid = 'test-uuid'
+    mock_uuid.return_value = uuid
+    file_path = user_image_file_path(None, 'example.jpg')
+
+    assert file_path == f'uploads/recipe/{uuid}.jpg'
